@@ -1,6 +1,6 @@
 {
-  "name": "react-id-swiper",
-  "version": "2.3.2",
+  "name": "@class101/swiper",
+  "version": "2.3.2-test3",
   "description": "ReactJs component for iDangerous Swiper",
   "main": "lib/index",
   "types": "lib/index.d.ts",
@@ -19,9 +19,10 @@
     "test": "jest",
     "test:dev": "jest --watch --coverage",
     "test:coverage": "jest --coverage",
-    "prepare": "yarn build",
+    "prepare": "yarn prettier && yarn build",
     "preversion": "yarn lint:ts",
-    "prepublishOnly": "yarn test && yarn lint:ts"
+    "prepublishOnly": "yarn prettier && yarn test && yarn lint:ts",
+    "prettier": "prettier --write 'src/**/*.ts?(x)'"
   },
   "keywords": [
     "iDangerous",

@@ -1,4 +1,4 @@
-import ReactIdSwiper from './ReactIdSwiper';
+import ReactIdSwiperClass101 from './ReactIdSwiper.class101';
 
 // Types
 export {
@@ -13,4 +13,4 @@ export {
 } from './types';
 
 // React-id-swiper
-export default ReactIdSwiper;
+export default ReactIdSwiperClass101;

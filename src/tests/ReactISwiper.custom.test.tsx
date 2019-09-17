@@ -48,9 +48,7 @@ describe('ReactIdSwiperCustom', () => {
         </ReactIdSwiper>
       );
 
-      const singleChildren = mount(
-        <ReactIdSwiper Swiper={Swiper}>{'Slide 2' as any}</ReactIdSwiper>
-      );
+      const singleChildren = mount(<ReactIdSwiper Swiper={Swiper}>{'Slide 2' as any}</ReactIdSwiper>);
 
       expect(multipleChildren.html()).toEqual(null);
       expect(singleChildren.html()).toEqual(null);
