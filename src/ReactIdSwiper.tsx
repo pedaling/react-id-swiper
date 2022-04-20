@@ -1,17 +1,25 @@
-import objectAssign from 'object-assign';
-import React, { Children, cloneElement, createRef, isValidElement, ReactElement, useEffect, useRef } from 'react';
+import React, {
+  forwardRef,
+  Children,
+  useEffect,
+  useRef,
+  cloneElement,
+  isValidElement,
+  ReactElement,
+  useCallback
+} from 'react';
 import Swiper from 'swiper';
+import objectAssign from 'object-assign';
+import { ReactIdSwiperProps, SwiperInstance, SwiperRefNode } from './types';
+import { classNames, validateChildren, isReactElement, setRef } from './utils';
+import { useForkRef } from './hooks';
 
-import { ReactIdSwiperProps, SwiperInstance } from './types';
-import { classNames, isReactElement, validateChildren } from './utils';
-
-const ReactIdSwiper = (props: ReactIdSwiperProps) => {
+const ReactIdSwiper = forwardRef<HTMLDivElement, ReactIdSwiperProps>((props, externalRef) => {
   const {
     activeSlideKey,
     ContainerEl,
     children,
     containerClass,
-    getSwiper,
     navigation,
     noSwiping,
     pagination,
@@ -32,19 +40,23 @@ const ReactIdSwiper = (props: ReactIdSwiperProps) => {
     loop
   } = props;
 
-  // Define swiper ref
-  const swiperNodeRef = createRef<HTMLDivElement>();
-
   // Define swiper instance ref
   const swiperInstanceRef = useRef<SwiperInstance>(null);
 
+  // Internal ref
+  const swiperNodeRef = useRef<SwiperRefNode>(null);
+
+  // Forked ref
+  const ref = useForkRef(swiperNodeRef, externalRef);
+
   // Get current active slide key
-  const getActiveSlideIndexFromProps = () => {
-    if (!activeSlideKey || !children) {
+  const getActiveSlideIndexFromProps = useCallback(() => {
+    if (!activeSlideKey) {
       return null;
     }
 
     let activeSlideId = 0;
+
     // In loop mode first slide index should be 1
     let id = loop ? 1 : 0;
 
@@ -53,50 +65,29 @@ const ReactIdSwiper = (props: ReactIdSwiperProps) => {
         if (child.key === activeSlideKey) {
           activeSlideId = id;
         }
+
         id += 1;
       }
     });
 
     return activeSlideId;
-  };
-
-  // Get swiper instance
-  const getSwiperInstance = (swiper: SwiperInstance) => {
-    if (typeof getSwiper === 'function') {
-      getSwiper(swiper);
-    }
-  };
+  }, [activeSlideKey, children, loop]);
 
   // Destroy swiper
-  const destroySwiper = () => {
+  const destroySwiper = useCallback(() => {
     if (swiperInstanceRef.current !== null) {
       swiperInstanceRef.current.destroy(true, true);
-      swiperInstanceRef.current = null;
-      getSwiperInstance(swiperInstanceRef.current);
+
+      setRef(swiperInstanceRef, null);
     }
-  };
+  }, []);
 
   // Initialize swiper
-  const buildSwiper = () => {
+  const buildSwiper = useCallback(() => {
     if (swiperNodeRef.current && swiperInstanceRef.current === null) {
-      swiperInstanceRef.current = new Swiper(swiperNodeRef.current, objectAssign({}, props));
-      getSwiperInstance(swiperInstanceRef.current);
+      setRef(swiperInstanceRef, new Swiper(swiperNodeRef.current, objectAssign({}, props)));
     }
-  };
-
-  // Rebuild swiper
-  const rebuildSwiper = () => {
-    destroySwiper();
-    buildSwiper();
-  };
-
-  // Update swiper
-  const updateSwiper = () => {
-    if (swiperInstanceRef.current !== null) {
-      swiperInstanceRef.current.update();
-      getSwiperInstance(swiperInstanceRef.current);
-    }
-  };
+  }, [props]);
 
   // Render slides
   const renderContent = (e: ReactElement) => {
@@ -116,33 +107,29 @@ const ReactIdSwiper = (props: ReactIdSwiperProps) => {
     });
   };
 
-  // Only execute when component is mounted or unmounted
+  // Destroy Swiper instance when component is unmounted
+  useEffect(() => {
+    return () => destroySwiper();
+  }, [destroySwiper]);
+
   useEffect(() => {
     buildSwiper();
 
-    const slideToIndex = getActiveSlideIndexFromProps();
-
-    if (swiperInstanceRef.current !== null && slideToIndex !== null) {
-      swiperInstanceRef.current.slideTo(slideToIndex);
-    }
-
-    return () => destroySwiper();
-  }, [buildSwiper, destroySwiper, getActiveSlideIndexFromProps]);
-
-  // Execute each time when props are updated
-  useEffect(() => {
     if (swiperInstanceRef.current !== null) {
       if (rebuildOnUpdate) {
-        rebuildSwiper();
+        destroySwiper();
+
+        buildSwiper();
       } else if (shouldSwiperUpdate) {
-        updateSwiper();
+        swiperInstanceRef.current.update();
+      }
 
-        const numSlides = swiperInstanceRef.current.slides.length;
+      const numSlides = swiperInstanceRef.current.slides.length;
 
-        if (numSlides <= swiperInstanceRef.current.activeIndex) {
-          const index = Math.max(numSlides - 1, 0);
-          swiperInstanceRef.current.slideTo(index);
-        }
+      if (numSlides <= swiperInstanceRef.current.activeIndex) {
+        const index = Math.max(numSlides - 1, 0);
+
+        swiperInstanceRef.current.slideTo(index);
       }
 
       const slideToIndex = getActiveSlideIndexFromProps();
@@ -151,7 +138,27 @@ const ReactIdSwiper = (props: ReactIdSwiperProps) => {
         swiperInstanceRef.current.slideTo(slideToIndex);
       }
     }
-  });
+  }, [
+    destroySwiper,
+    getActiveSlideIndexFromProps,
+    rebuildOnUpdate,
+    shouldSwiperUpdate,
+    buildSwiper
+  ]);
+
+  // No render if wrapper elements are not provided
+  if (!children || !ContainerEl || !WrapperEl) {
+    return null;
+  }
+
+  // Validate children props
+  if (!validateChildren(children)) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('Children should be react element or an array of react element!!');
+    }
+
+    return null;
+  }
 
   // No render if wrapper elements are not provided
   if (!children || !ContainerEl || !WrapperEl) {
@@ -165,7 +172,7 @@ const ReactIdSwiper = (props: ReactIdSwiperProps) => {
   }
 
   return (
-    <ContainerEl className={containerClass} dir={rtl && 'rtl'} ref={swiperNodeRef}>
+    <ContainerEl className={containerClass} dir={rtl && 'rtl'} ref={ref}>
       {parallax && parallaxEl && renderParallax && renderParallax(props)}
       <WrapperEl className={wrapperClass}>{Children.map(children, renderContent)}</WrapperEl>
       {pagination && pagination.el && renderPagination && renderPagination(props)}
@@ -174,7 +181,7 @@ const ReactIdSwiper = (props: ReactIdSwiperProps) => {
       {navigation && navigation.prevEl && renderPrevButton && renderPrevButton(props)}
     </ContainerEl>
   );
-};
+});
 
 const defaultProps: Partial<ReactIdSwiperProps> = {
   containerClass: 'swiper-container',

@@ -1,5 +1,22 @@
 # Change Log for React-id-swiper
 
+## [v4.0.0](https://github.com/kidjp85/react-id-swiper/compare/4.0.0...3.0.0) - Released on Jun 22th, 2020
+  * Upgrade to support `Swiper` newest version
+  * Remove `getSwiper` props
+  * Allow to access `Swiper instance` from `ref`
+  * Upgrade npm packages
+
+## [v3.0.0](https://github.com/kidjp85/react-id-swiper/compare/3.0.0...2.4.0) - Released on Feb 29th, 2020
+  * Upgrade to support `Swiper` version 5.3.0
+  * Replace `createRef` with `useRef` for `swiper` node ref
+  * Upgrade npm packages
+
+
+## [v2.4.0](https://github.com/kidjp85/react-id-swiper/compare/2.4.0...2.3.2) - Released on Nov 7th, 2019
+  * Upgrade to support `Swiper` version 5.x
+  * Drop support for `Swiper`'s stylesheet
+  * Upgrade npm packages
+
 ## [v2.3.2](https://github.com/kidjp85/react-id-swiper/compare/2.3.2...2.3.1) - Released on July 24th, 2019
   * Upgrade npm packages
   * Replace `tslint` with `eslint`
